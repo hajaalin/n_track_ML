@@ -125,137 +125,73 @@ print(results.mean().mean())
 pipeline version, to avoid data leakage from scaling before splitting 
 '''
 
-model_pipe = KerasClassifier(build_fn=create_model, epochs=100, verbose=0)
-DNN_pipeline = Pipeline(
-    steps=[('scaler', StandardScaler()),
-           ('DNN', model_pipe)]
-)
-results = pd.DataFrame(columns=['spl1', 'spl2', 'spl3', 'spl4'])
-for i in range(30):  # repeated CV, since one iteration gives too unstable results
-    print('iter ' + str(i) + ' start, time:', datetime.now().strftime("%H:%M:%S"))
-    scores = cross_val_score(DNN_pipeline, X, y, cv=gkf, groups=data_raw.reset_index()['file'])
-    results = results.append(pd.Series(scores, index=results.columns), ignore_index=True)
 
-print(results.mean().mean())
+def train_dnn(iters):
+    gkf = StratifiedGroupKFold(n_splits=4, shuffle=True)
+    model_pipe = KerasClassifier(build_fn=create_model, epochs=100, verbose=0)
+    DNN_pipeline = Pipeline(
+        steps=[('scaler', StandardScaler()),
+               ('DNN', model_pipe)]
+    )
+    results = pd.DataFrame(columns=['spl1', 'spl2', 'spl3', 'spl4'])
+    for i in range(iters):  # repeated CV, since one iteration gives too unstable results
+        print('iter ' + str(i) + ' start, time:', datetime.now().strftime("%H:%M:%S"))
+        scores = cross_val_score(DNN_pipeline, Xsp, y, cv=gkf, groups=data_raw.reset_index()['file'])
+        results = results.append(pd.Series(scores, index=results.columns), ignore_index=True)
+
+    print(results.mean().mean())
+    return results.mean().mean()
+
 
 '''
-SHAP explanation of DNN
+feature knockout to estimate feature importances for DNN
 '''
-# repeated 10 times the code below returns average 0.640484
+knocks = {}
+for feature in X.columns:
+    Xsp = X.copy()
+    Xsp[feature] = 0
+    print(feature)
+    knocks[feature] = train_dnn(30)
 
-pred_list = []
-pred_proba_list = []
-shap_vs_list = []
-sX_test_list = []
-sy_test_list = []
-s_id_list = []
+# subsets of features to ko redundant
 
-for strain, stest in gkf.split(X_scaled, y, data_raw.reset_index()['file']):
-    test_data = data_raw.reset_index().iloc[stest, :]  # kept here for s_id_list
-    sX = pd.DataFrame(X_scaled).iloc[strain, :]
-    sy = y.iloc[strain]
-    sX_test = pd.DataFrame(X_scaled).iloc[stest, :]
-    sy_test = y.iloc[stest]
+speed = ['f_mean_diff_xy_micron',
+         'f_max_diff_xy_micron',
+         'f_var_diff_xy_micron',
+         'f_Rvar_diff_xy_micron',
+         ]
 
-    sX_test_list.append(sX_test)
-    sy_test_list.append(sy_test)
-    s_id_list.append(test_data[['file', 'particle']])
+morphology = ['f_area_micron',
+              'f_perimeter_au_norm',
+              'f_slope_area_micron',
+              'f_slope_perimeter_au_norm',
+              ]
 
-    model.fit(sX, sy)
+mindist = ['f_min_dist_micron',
+           'f_var_dist_micron',
+           'f_Rvar_dist_micron',
+           'f_min_dist_range',
+           'f_total_min_dist',
+           'f_slope_min_dist_micron',
+           ]
 
-    pred = model.predict(sX_test)
-    pred_list.append(pred)
-    pred_proba = model.predict_proba(sX_test)
-    pred_proba_list.append(pred_proba)
+persistence = ['f_total_displacement',
+               'f_persistence',
+               'f_outliers2SD_diff_xy',
+               'f_outliers3SD_diff_xy',
+               ]
 
-    explainer = shap.KernelExplainer(model, sX_test)
-    # shap_values = explainer.shap_values(sX_test)
-    # shap_vs_list.append(shap_values)
+homologs = ['f_fastest_mask',
+            'f_most_central_mask',
+            ]
 
-    # shap.summary_plot(shap_values, sX_test, sort=False, color_bar=False, plot_size=(10,10))
+gr_list = [speed, morphology, mindist, persistence, homologs]
 
-all_sX_test = pd.concat(sX_test_list)
-all_sy_test = pd.concat(sy_test_list)
-# all_splits_shap = np.concatenate(shap_vs_list)
-all_pred = np.concatenate(pred_list)
-all_pred_proba = np.concatenate(pred_proba_list)
-all_s_id = pd.concat(s_id_list)
+gr_knocks = {}
+for gr in gr_list:
+    Xsp = X.copy()
+    Xsp[gr] = 0
+    print(str(gr))
+    gr_knocks[str(gr)] = train_dnn(30)
 
-list_to_concat = [all_sX_test.reset_index(),
-                  all_sy_test.reset_index(),
-                  # df_all_splits_shap,
-                  pd.DataFrame(all_pred, columns=['predicted']),
-                  pd.DataFrame(all_pred_proba).add_prefix('proba_'),
-                  all_s_id]
-
-df_all = pd.concat(list_to_concat, axis=1)
-df_all['correct'] = (df_all['t_serum_conc_percent'] == df_all['predicted'])
-print((np.sum(df_all['correct'])) / (len(df_all)))
-
-'''
-SHAP explanation of DNN attempt
-Weird unstructured block, which somehow gives realistic val_accuracy in splits, and even returns some sort of 
-averaged SHAP values for each feature. The rest doesn't work, no swarm plot, no aggregation for splits etc.
-'''
-
-gkf = StratifiedGroupKFold(n_splits=4, shuffle=True)
-
-
-pred_list = []
-pred_proba_list = []
-shap_vs_list = []
-sX_test_list = []
-sy_test_list = []
-s_id_list = []
-
-for strain, stest in gkf.split(X_scaled, y, data_raw.reset_index()['file']):
-    #test_data = data_raw.reset_index().iloc[stest, :]  # kept here for s_id_list
-    sX = pd.DataFrame(X_scaled, columns=X.columns).iloc[strain, :]
-    sy = y.iloc[strain]
-    sX_test = pd.DataFrame(X_scaled, columns=X.columns).iloc[stest, :]
-    sy_test = y.iloc[stest]
-
-    sX_test_list.append(sX_test)
-    sy_test_list.append(sy_test)
-    #s_id_list.append(test_data[['file', 'particle']])
-
-    model = models.Sequential()
-    model.add(layers.Dense(256, activation='relu'))
-    model.add(layers.Dense(256, activation='relu'))
-    model.add(layers.Dense(256, activation='relu'))
-    model.add(layers.Dense(256, activation='relu'))
-    model.add(layers.Dense(256, activation='relu'))
-    model.add(layers.Dense(256, activation='relu'))
-    model.add(layers.Dense(256, activation='relu'))
-    model.add(layers.Dense(1, activation='sigmoid'))
-
-    model.compile(optimizer='adam',
-                  loss='binary_crossentropy',
-                  metrics=['accuracy'])
-
-
-    model.fit(sX, sy, epochs=100, validation_data=(sX_test, sy_test))
-
-    pred = model.predict(sX_test)
-    pred_list.append(pred)
-    # pred_proba = model.predict_proba(sX_test)
-    # pred_proba_list.append(pred_proba)
-
-    explainer = shap.KernelExplainer(model, sX_test)
-    shap_values = explainer.shap_values(sX_test)
-    shap_vs_list.append(shap_values)
-
-    shap.summary_plot(shap_values, sX_test, sort=False, color_bar=False, plot_size=(25,10))
-    #shap.plots.beeswarm(shap_values, max_display=20)
-
-all_sX_test = pd.concat(sX_test_list)
-all_sy_test = pd.concat(sy_test_list)
-all_splits_shap = np.concatenate(shap_vs_list)
-all_pred = np.concatenate(pred_list)
-#all_pred_proba = np.concatenate(pred_proba_list)
-#all_s_id = pd.concat(s_id_list)
-
-
-#plt.title('aggregated')
-shap.summary_plot(all_splits_shap, all_sX_test, sort=False, color_bar=False, plot_size=(25, 10))
-
+# todo: do same KO wiht learning curve n_track_DNN

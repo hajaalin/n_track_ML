@@ -1,0 +1,65 @@
+Putty host name turso.cs.helsinki.fi
+Login Redchuk
+
+turso
+
+ls 			        list files in current dir
+ls -la 			    list all (incl hidden)
+>> ~/.bashrc 		updates the shell
+conda env list		to check the environments
+which python 		to check version
+ctrl D			    to exit python (back to bash or stop whole session)
+source ~/.bashrc	run every time after login
+shift insert  		paste in putty
+
+/home/redchuk = $HOME		home directory (small, not appropriate to store stuff)
+/proj/redchuk = $PROJ		good place to store software (longterm)
+
+/wrk-vakka 			            for temp storage (script outputs)
+/wrk-vakka/group/lmu/projects 	common LMU area
+/wrk-vakka/users/redchuk	    personal area
+
+srun --interactive -c4 --mem=4G -t04:00:00 -pgpu-oversub -Mukko --pty bash		starts an interactive session on ukko cluster
+\\turso-fs.cs.helsinki.fi\								                        open cluster dirs from win
+
+
+
+
+-----------------------------------
+Hi Taras,
+
+There's now a python environment you can use for inceptiontime / shap stuff in LMU group folder. Here are steps for access:
+
+0. log in with Putty
+
+1. copy conda activation script in your home directry:
+cat /proj/group/lmu/envs_and_modules/bashrc_miniconda_proj_lmu >> ~/.bashrc
+
+2. "activate" the activation script. This makes all conda commands available
+source ~/.bashrc
+
+3. select Conda environment
+conda activate tsc
+
+4. create iPython kernel which will make this environment available in Jupyter notebook
+python -m ipykernel install --user --name tsc --display-name "Python (tsc)"
+
+5. go to your project directory (the best place where to store code)
+cd $PROJ
+
+6. clone the github repo (my fork and shap branch). Might be best that I first make a pull request so we bring your original repo up to speed with my fork.
+
+7. browse to hub.cs.helsinki.fi
+- you should be able to select kernel "tsc"
+- browse to /proj/redchuk to find and open the notebook
+
+
+https://wiki.helsinki.fi/display/it4sci/HPC+Environment+User+Guide
+https://wiki.helsinki.fi/display/it4sci/Jupyter+Hub+User+Guide
+
+I'm now going for lunch, I have one task after that, then I'd be free to go through this if you like. Monday afternoon is also ok.
+
+Best,
+Harri
+
+cat /proj/group/lmu/envs_and_modules/bashrc_miniconda_proj_lmu

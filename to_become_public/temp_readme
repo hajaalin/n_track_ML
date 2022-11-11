@@ -1,0 +1,21 @@
+
+todo:
+
+example_images
+    imgs to be used for tracking, OME-TIFF
+
+data_tabular
+    * dataset for ML, csv
+
+scripts
+    * tracking
+    * data_preprocessing (feature engineering)
+    * GBC+baseline+SHAP (printing, plotting, how many iterations?)
+    MLP (basic)
+    InceptionTime (will it be directory?)
+
+temp_readme (to be removed when shared)
+readme
+requirements (or do we need it if scripts packed properly?)
+
+

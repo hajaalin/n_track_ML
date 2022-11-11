@@ -14,6 +14,8 @@ from keras.layers import Dropout
 # from sklearn.model_selection import GridSearchCV
 # from sklearn.ensemble import RandomForestClassifier
 
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import StratifiedGroupKFold
 
 ''' 
 read the data 
@@ -62,8 +64,8 @@ data_agg = data.groupby(['file', 'particle']).agg(t_guide=('guide', 'first'),
                                                   f_var_dist_micron=('min_dist_micron', 'var'),
                                                   )
 
-data_agg['f_Rvar_diff_xy_micron'] = data_agg['f_var_diff_xy_micron']/data_agg['f_mean_diff_xy_micron']
-data_agg['f_Rvar_dist_micron'] = data_agg['f_var_dist_micron']/data_agg['f_min_dist_micron']
+data_agg['f_Rvar_diff_xy_micron'] = data_agg['f_var_diff_xy_micron'] / data_agg['f_mean_diff_xy_micron']
+data_agg['f_Rvar_dist_micron'] = data_agg['f_var_dist_micron'] / data_agg['f_min_dist_micron']
 # Relative variance
 
 data_agg['f_total_displacement'] = np.sqrt((data_agg['sum_diff_x_micron']) ** 2 + (data_agg['sum_diff_y_micron']) ** 2)
@@ -123,7 +125,7 @@ data_sterile = data_agg.drop(['sum_diff_x_micron',
                               'end_min_dist_micron',
                               'file_mean_diff_xy_micron',
                               'file_max_min_dist_micron',
-                              'f_sum_diff_xy_micron', # proportional to f_mean_diff_xy_micron, thus, useless
+                              'f_sum_diff_xy_micron',  # proportional to f_mean_diff_xy_micron, thus, useless
                               ], axis=1)
 data_sterile.reset_index(inplace=True)
 corr_features = data_sterile.corr()
@@ -133,16 +135,15 @@ Train / test split
 '''
 
 features = [
-           'f_mean_diff_xy_micron', 'f_max_diff_xy_micron', 'f_var_diff_xy_micron',
-           'f_area_micron', 'f_perimeter_au_norm', 'f_min_dist_micron',
-           'f_var_dist_micron', 'f_Rvar_diff_xy_micron', 'f_Rvar_dist_micron',
-           'f_total_displacement', 'f_persistence', 'f_fastest_mask',
-           'f_min_dist_range', 'f_total_min_dist', 'f_most_central_mask',
-           'f_slope_min_dist_micron', 'f_slope_area_micron',
-           'f_slope_perimeter_au_norm', 'f_outliers2SD_diff_xy',
-           'f_outliers3SD_diff_xy'
-            ]
-
+    'f_mean_diff_xy_micron', 'f_max_diff_xy_micron', 'f_var_diff_xy_micron',
+    'f_area_micron', 'f_perimeter_au_norm', 'f_min_dist_micron',
+    'f_var_dist_micron', 'f_Rvar_diff_xy_micron', 'f_Rvar_dist_micron',
+    'f_total_displacement', 'f_persistence', 'f_fastest_mask',
+    'f_min_dist_range', 'f_total_min_dist', 'f_most_central_mask',
+    'f_slope_min_dist_micron', 'f_slope_area_micron',
+    'f_slope_perimeter_au_norm', 'f_outliers2SD_diff_xy',
+    'f_outliers3SD_diff_xy'
+]
 
 tst = int((data_sterile['file'].unique().shape[0]) / 4)
 # nuclei number to choose for testing
@@ -150,51 +151,65 @@ tst = int((data_sterile['file'].unique().shape[0]) / 4)
 # test_choice = np.random.RandomState(7).choice(data_sterile['file'].unique(), tst, replace=False)
 
 results = pd.DataFrame()
-for i in range(30):
-    test_choice = np.random.choice(data_sterile['file'].unique(), tst, replace=False)
+ix = 0 # index for columns in results
+for i in range(20):
 
-    test_data = data_sterile[data_sterile['file'].isin(test_choice)]
-    train_data = data_sterile[~data_sterile['file'].isin(test_choice)]
-    train_data = train_data.dropna()
+    #X = data_sterile[features]
+    labels = ((data_sterile['t_serum_conc_percent']) / 10).astype('int')
+    groups = data_sterile['file']
+    gkf = StratifiedGroupKFold(n_splits=4, shuffle=True)
+    for train_idxs, test_idxs in gkf.split(data_sterile[features], labels, groups):
 
-    X = train_data[features]
 
-    y = train_data['t_serum_conc_percent']
-    y = (y / 10).astype('int')  # binarize, '10% serum' = 1, '0.3% serum' = 0
+        X = data_sterile[features].loc[train_idxs]
+        X_test = data_sterile[features].loc[test_idxs]
+        y = labels.loc[train_idxs]
+        y_test = labels.loc[test_idxs]
 
-    X_test = test_data[features]
 
-    y_test = test_data['t_serum_conc_percent']
-    y_test = (y_test / 10).astype('int')  # binarize, '10% serum' = 1, '0.3% serum' = 0
+        scaler = StandardScaler()
+        scaler.fit(X)
+        X_norm = scaler.transform(X)
+        X_test_norm = scaler.transform(X_test)
 
-    X_norm = X / X.max(axis=0)
-    X_test_norm = X_test / X.max(axis=0)  # devided by X.max but not X_test.max, so that normalization is the same
+        model = models.Sequential()
+        model.add(layers.Dense(256, activation='relu'))
+        model.add(layers.Dense(256, activation='relu'))
+        model.add(layers.Dense(256, activation='relu'))
+        model.add(layers.Dense(256, activation='relu'))
+        model.add(layers.Dense(256, activation='relu'))
+        model.add(layers.Dense(256, activation='relu'))
+        model.add(layers.Dense(256, activation='relu'))
+        model.add(layers.Dense(1, activation='sigmoid'))
 
-    model = models.Sequential()
-    model.add(layers.Dense(64, activation='relu'))
-    model.add(layers.Dense(64, activation='relu'))
-    model.add(layers.Dense(64, activation='relu'))
-    model.add(layers.Dense(1, activation='sigmoid'))
+        model.compile(optimizer='adam',
+                      loss='binary_crossentropy',
+                      metrics=['accuracy'])
 
-    model.compile(optimizer='adam',
-                  loss='binary_crossentropy',
-                  metrics=['accuracy'])
+        history = model.fit(X_norm,
+                            y,
+                            epochs=500,
+                            # batch_size=50,
+                            validation_data=(X_test_norm, y_test),
+                            verbose=0,
+                            )
 
-    history = model.fit(X_norm,
-                        y,
-                        epochs=500,
-                        # batch_size=50,
-                        validation_data=(X_test_norm, y_test),
-                        verbose=0,
-                        )
+        results["acc" + str(ix)] = history.history['accuracy']
+        results["val_acc" + str(ix)] = history.history['val_accuracy']
+        ix += 1
 
-    results["acc" + str(i)] = history.history['accuracy']
-    results["val_acc" + str(i)] = history.history['val_accuracy']
+        # print(1-y.sum()/len(y))
+        # print(1 - y_test.sum() / len(y_test))
+        print(ix)
 
-    # print(1-y.sum()/len(y))
-    print(1 - y_test.sum() / len(y_test))
-
-dnn_results=results.iloc[:,range(1,60,2)]
-dnn_results['mean']=dnn_results.mean(axis=1)
+dnn_results = results.iloc[:, range(1, len(results.columns), 2)]
+dnn_results['mean'] = dnn_results.mean(axis=1)
 plt.plot(dnn_results['mean'])
 plt.show()
+
+# this moved to n_track_DNN_nff:
+# todo normalization
+# todo cv as in sgkf but no pipeline
+# todo repeat 63+acc
+# todo repeat Harris shap (monitor acc?)
+# todo make SHAP aggregated from repeats (monitor acc?)

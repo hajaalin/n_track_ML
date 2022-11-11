@@ -310,7 +310,7 @@ jumpers = jumpers[['file',
          'correct', ]]
 
 jumpers.to_csv('C:/Users/redchuk/python/plot_trajectory_test/jumpers.csv')
-# todo: same with mean_diff_xy, get jumper images from Antti
+
 # correlation for features
 plt.figure(figsize=(8, 7))
 ax = sns.heatmap(all_sX_test.corr())
