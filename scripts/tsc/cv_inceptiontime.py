@@ -136,6 +136,7 @@ def inceptiontime_cv(cv, X_inc, y_inc, y_true, groups, output_it, \
     columns = ['accuracy','precision','recall','f1']
     scores = pd.DataFrame(columns=columns)
 
+    shap_lists = []
     shap_deep_list = []
     shap_grad_list = []
     X_test_list = []
