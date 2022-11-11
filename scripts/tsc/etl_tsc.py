@@ -27,17 +27,6 @@ import sktime
 print(sktime.__version__)
 
 
-# initial filtering based on experimental setup
-def initial_filtering(data):
-    data = data[~data["comment"].isin(["stress_control"])]
-    data = data[~data["comment"].isin(["H2B"])]
-    data = data[data["guide"].str.contains('1398') | data["guide"].str.contains('1514')]
-    data = data[data["time"] < 40]
-
-    return data
-
-
-
 def create_instance_index(data):
     # combine file and particle columns for using as instance index later on
     data['fp'] = data['file'] + '__' + data['particle'].astype(str)
@@ -147,7 +136,6 @@ fsets['f_dxy_mindist_angle_area'] = fsets['f_dxy_mindist_angle'] + ['area_micron
 
 def get_X_dfX_y_groups(data, f_set_name):
     data = data.copy()
-    data = initial_filtering(data)
     data = create_instance_index(data)
     data = add_nframes_col(data)
     debug0 = data.copy()
