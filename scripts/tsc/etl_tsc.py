@@ -33,11 +33,6 @@ def create_instance_index(data):
     return data
 
 
-def select_columns(data, cols):
-    data = data[cols]
-    return data
-
-
 def nested_max(row, col_name='col'):
     return row[col_name].max()
 
