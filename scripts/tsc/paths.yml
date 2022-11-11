@@ -11,5 +11,5 @@ log:
   tsc: "/proj/hajaalin/Projects/n_track_ML/output/log"
 
 data:
-  dir: "/proj/hajaalin/Projects/n_track_ML/data"
-  raw_data_file: "63455ea_data_chromatin_live.csv"
+  dir: "/proj/hajaalin/Projects/n_track_ML/to_become_public/tracking_output/"
+  raw_data_file: "data_47091baa.csv"
