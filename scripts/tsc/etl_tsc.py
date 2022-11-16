@@ -11,8 +11,7 @@ from sktime.datatypes._panel._convert import (
     from_nested_to_multi_index,
     from_nested_to_3d_numpy,
 )
-#from sktime.utils.data_io import make_multi_index_dataframe
-from sktime.datasets import make_multi_index_dataframe
+
 import sys
 
 from utility import parse_config
@@ -26,19 +25,6 @@ print(sktime.__version__)
 
 def nested_max(row, col_name='col'):
     return row[col_name].max()
-
-
-
-def separate_observations_and_classes(datan):
-    # separate class vector...
-    y = datan['class'].values
-    datan = datan.drop(columns=['class'])
-    #print(datan.head())
-
-    # ... and observations
-    X = from_nested_to_3d_numpy(datan)
-    return X,y
-
 
 def displacement(row):
     return math.sqrt(row['dx']**2 + row['dy']**2)
@@ -77,7 +63,7 @@ fsets['D_Dist_t_dt_A'] = fs + ['D', 'Dist', 't','dt', 'A']
 fsets['all'] =           fs + ['D', 'A', 'P', 'Dist', 't','dt']
 
 
-def get_X_dfX_y_groups(data, f_set_name):
+def get_X_y_groups(data, f_set_name, X_in_dataframe=False, debug=False):
     data = data.copy()
 
     # combine file and particle columns for using as instance index later on
@@ -106,18 +92,13 @@ def get_X_dfX_y_groups(data, f_set_name):
     # nested dataframe where file/particle define an instance
     datan = from_multi_index_to_nested(datam, instance_index='fp')
     debug2 = datan.copy()
-    
-    #print(datan['file'])
-    #print(datan.head())
+
     # read group name from the last element of the series
-    #print(datan.head())
     # index of first element might be 0,1 or 2, depending on how many elements
-    #print(datan.head())
     # have been dropped because of adding features with df.diff()
     print(datan.columns)
     groups = datan['file'].apply(lambda x: x.iloc[-1])
     datan = datan.drop(columns=['file'])
-    print(datan.head(2))
 
     # collapse class vector to a single value
     datan['class'] = datan.apply(nested_max, axis=1, col_name='serum')
@@ -125,9 +106,15 @@ def get_X_dfX_y_groups(data, f_set_name):
     y = datan['class'].values
     
     dfX = datan.drop(columns=['class', 'serum'])
+    features = dfX.columns
     X = from_nested_to_3d_numpy(dfX)
 
-    return X, dfX, y, groups, debug1, debug2
+    if X_in_dataframe:
+        return dfX, y, groups
+    elif debug:
+        return X, y, features, groups, debug1, debug2
+
+    return X, y, features, groups
 
 
 def load_data(path):
@@ -151,10 +138,11 @@ def test():
     print(data.shape)
 
     fset = 'all'
-    X, dfX, y, groups, debugm, debugn = get_X_dfX_y_groups(data, fset)
-    print(dfX.shape)
+    X, y, features, groups, debugm, debugn = get_X_y_groups(data, fset,\
+                                                              debug=True)
     print(X.shape)
     print(y.shape)
+    print(features)
     print(groups.shape)
 
     
