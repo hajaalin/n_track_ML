@@ -12,7 +12,7 @@ import tensorflow as tf
 #tf.compat.v1.disable_v2_behavior() 
 
 from utility import parse_config
-from etl_tsc import load_data, get_X_y_groups, fsets
+from etl_tsc import load_data, fsets
 
 logger = logging.getLogger(__name__)
 
@@ -252,12 +252,11 @@ def get_shap_values(model_, X_train, X_test):
 '''
 Repeat cross-validation
 '''
-def inceptiontime_cv_repeat(data, output_it, fset, kernel_size=20, epochs=250, repeats=10,job_id='', return_model_eval=False, save_shap_values=False, set_split_random_state=False):
+def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size=20, epochs=250, repeats=10,job_id='', return_model_eval=False, save_shap_values=False, set_split_random_state=False):
     logger.info(fset)
-    X, y, feature_names, groups = get_X_y_groups(data, fset)
 
     # fset includes also class and file, here they have been removed
-    print(feature_names)
+    print(features)
 
     # prepare_data_for inception returns all, no split to train and test sets
     X_inc, y_inc, nb_classes, y_true, enc = prepare_data_for_inception(X,y)
@@ -279,7 +278,7 @@ def inceptiontime_cv_repeat(data, output_it, fset, kernel_size=20, epochs=250, r
         cv_output = inceptiontime_cv(cv, X_inc, y_inc, y_true, \
                                      groups, output_it, \
                                      kernel_size=kernel_size, epochs=epochs, \
-                                     feature_names=feature_names, \
+                                     feature_names=features, \
                                      nb_classes=nb_classes, \
                                      return_model_eval=return_model_eval, \
                                      save_shap_values=save_shap_values)
@@ -370,16 +369,14 @@ def cv_inceptiontime(inceptiontime_dir, paths, kernel_size, epochs, fset, repeat
     # read the data 
     data_dir = paths["data"]["dir"]
     raw_data_file = paths["data"]["raw_data_file"]
+    raw_data_file = Path(data_dir) / raw_data_file
 
-    data = load_data(Path(data_dir) / raw_data_file)
-    logger.info('Loaded data shape: ' + str(data.shape))
-    # TODO: X, y, groups = get_X_y_groups(data)
-
+    X, y, groups, features = load_data(raw_data_file, fset)
 
     tic = time.perf_counter()
     
-    logger.info("single fset")
-    scores, shap_lists_all = inceptiontime_cv_repeat(data, output_it, fset, kernel_size=kernel_size, epochs=epochs, repeats=repeats, save_shap_values=save_shap_values, job_id=job_id)
+    logger.info("Start processing...")
+    scores, shap_lists_all = inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size=kernel_size, epochs=epochs, repeats=repeats, save_shap_values=save_shap_values, job_id=job_id)
         
     toc = time.perf_counter()
     logger.info(f"Finished processing in {(toc-tic) / 60:0.1f} minutes.")

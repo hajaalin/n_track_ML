@@ -581,3 +581,20 @@ sbatch sbatch/save_X_test2_f_dxy_mindist_angle_area_20221103/sbatch_save_X_test2
 done
 
 
+
+##
+## 20221116
+##
+
+# code cleanup
+# test cv_inceptiontime.py
+
+job="test_code_cleanup"
+fset="all"
+ts="20221116"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --test --branch_i master --branch_n master --job_name $job_name --options "--fset $fset --kernel_size=20 --epochs=20 --repeats=3" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+srun --interactive -c4 --mem=4G -t04:00:00 -pgpu-oversub -Mukko --pty bash
+bash sbatch/test_code_cleanup_all_20221116/sbatch_test_code_cleanup_all_20221116.sh 

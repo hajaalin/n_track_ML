@@ -63,8 +63,10 @@ fsets['D_Dist_t_dt_A'] = fs + ['D', 'Dist', 't','dt', 'A']
 fsets['all'] =           fs + ['D', 'A', 'P', 'Dist', 't','dt']
 
 
-def get_X_y_groups(data, f_set_name, X_in_dataframe=False, debug=False):
-    data = data.copy()
+def load_data(path, f_set_name, X_in_dataframe=False, debug=False):
+    data = pd.read_csv(path)
+    data = add_features(data)
+    print('Loaded data shape: ' + str(data.shape))
 
     # combine file and particle columns for using as instance index later on
     data['fp'] = data['file'] + '__' + data['particle'].astype(str)
@@ -112,16 +114,10 @@ def get_X_y_groups(data, f_set_name, X_in_dataframe=False, debug=False):
     if X_in_dataframe:
         return dfX, y, groups
     elif debug:
-        return X, y, features, groups, debug1, debug2
+        return X, y, groups, features, debug1, debug2
 
-    return X, y, features, groups
+    return X, y, groups, features
 
-
-def load_data(path):
-    data = pd.read_csv(path)
-    data = add_features(data)
-    return data
-    
 
 def test():
     # open configuration
@@ -132,14 +128,12 @@ def test():
     # read data file name
     data_dir = paths['data']['dir']
     raw_data_file = paths['data']['raw_data_file']
+    raw_data_file = Path(data_dir) / raw_data_file
 
     # load data
-    data = load_data(Path(data_dir) / raw_data_file)
-    print(data.shape)
-
     fset = 'all'
-    X, y, features, groups, debugm, debugn = get_X_y_groups(data, fset,\
-                                                              debug=True)
+    X, y, groups, features, d1, d2 = load_data(raw_data_file, fset, debug=True)
+
     print(X.shape)
     print(y.shape)
     print(features)
