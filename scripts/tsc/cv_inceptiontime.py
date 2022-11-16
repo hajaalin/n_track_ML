@@ -254,7 +254,7 @@ def get_shap_values(model_, X_train, X_test):
 '''
 Repeat cross-validation
 '''
-def inceptiontime_cv_repeat(data, output_it, fset, kernel_size=20, epochs=250, repeats=10,job_id='', return_model_eval=False, save_shap_values=False):
+def inceptiontime_cv_repeat(data, output_it, fset, kernel_size=20, epochs=250, repeats=10,job_id='', return_model_eval=False, save_shap_values=False, set_split_random_state=False):
     logger.info(fset)
     X, dfX, y, groups, debugm, debugn = get_X_dfX_y_groups(data, fset)
 
@@ -268,8 +268,12 @@ def inceptiontime_cv_repeat(data, output_it, fset, kernel_size=20, epochs=250, r
     logger.debug("X_inc: " + str(X_inc.shape))
     logger.debug("y_inc: " + str(y_inc.shape))
 
-    cv = StratifiedGroupKFold(n_splits=4, shuffle=True)
-
+    if set_split_random_state:
+        cv = StratifiedGroupKFold(n_splits=4, shuffle=True, random_state=42)
+    else:
+        cv = StratifiedGroupKFold(n_splits=4, shuffle=True)
+    print(cv)
+        
     scores_all = []
     shap_lists_all = []
     for i in range(repeats):
