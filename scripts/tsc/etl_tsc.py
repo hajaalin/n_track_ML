@@ -17,10 +17,10 @@ import sys
 from utility import parse_config
 
 import sklearn
-print(sklearn.__version__)
+print('sklearn ' + sklearn.__version__)
 
 import sktime
-print(sktime.__version__)
+print('sktime ' + sktime.__version__)
 
 
 def nested_max(row, col_name='col'):
