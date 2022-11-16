@@ -1,7 +1,10 @@
+import logging
 from pathlib import Path
 import numpy as np
 import shap
+from scikeras.wrappers import KerasClassifier
 import sklearn
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import StratifiedGroupKFold
 import tensorflow as tf
 # https://stackoverflow.com/questions/66814523/shap-deepexplainer-with-tensorflow-2-4-error
@@ -9,9 +12,8 @@ import tensorflow as tf
 #tf.compat.v1.disable_v2_behavior() 
 
 from utility import parse_config
-from etl_tsc import load_data, get_X_dfX_y_groups, fsets
+from etl_tsc import load_data, get_X_y_groups, fsets
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -43,10 +45,6 @@ def prepare_data_for_inception(X,y):
     return x_train, y_train, nb_classes, y_true_train, enc
 
 
-from scikeras.wrappers import KerasClassifier, KerasRegressor
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.model_selection import GroupKFold
-from sklearn.model_selection import cross_val_score
 
 
 def standard_scale_x_by_series(_X):
@@ -256,10 +254,9 @@ Repeat cross-validation
 '''
 def inceptiontime_cv_repeat(data, output_it, fset, kernel_size=20, epochs=250, repeats=10,job_id='', return_model_eval=False, save_shap_values=False, set_split_random_state=False):
     logger.info(fset)
-    X, dfX, y, groups, debugm, debugn = get_X_dfX_y_groups(data, fset)
+    X, y, feature_names, groups = get_X_y_groups(data, fset)
 
-    # fset includes also class and file, get feature names for SHAP
-    feature_names = dfX.columns
+    # fset includes also class and file, here they have been removed
     print(feature_names)
 
     # prepare_data_for inception returns all, no split to train and test sets
@@ -376,6 +373,7 @@ def cv_inceptiontime(inceptiontime_dir, paths, kernel_size, epochs, fset, repeat
 
     data = load_data(Path(data_dir) / raw_data_file)
     logger.info('Loaded data shape: ' + str(data.shape))
+    # TODO: X, y, groups = get_X_y_groups(data)
 
 
     tic = time.perf_counter()
