@@ -264,15 +264,15 @@ def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size
     logger.debug("X_inc: " + str(X_inc.shape))
     logger.debug("y_inc: " + str(y_inc.shape))
 
-    if set_split_random_state:
-        cv = StratifiedGroupKFold(n_splits=4, shuffle=True, random_state=42)
-    else:
-        cv = StratifiedGroupKFold(n_splits=4, shuffle=True)
-    print(cv)
-        
     scores_all = []
     shap_lists_all = []
     for i in range(repeats):
+        if set_split_random_state:
+            cv = StratifiedGroupKFold(n_splits=4, shuffle=True, random_state=42)
+        else:
+            cv = StratifiedGroupKFold(n_splits=4, shuffle=True)
+        print(cv)
+        
         print('repeat: %d/%d' % (i+1, repeats))
         logger.debug('repeat: %d/%d' % (i+1, repeats))
         cv_output = inceptiontime_cv(cv, X_inc, y_inc, y_true, \
