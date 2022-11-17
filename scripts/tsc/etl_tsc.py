@@ -23,8 +23,8 @@ import sktime
 print('sktime ' + sktime.__version__)
 
 
-def nested_max(row, col_name='col'):
-    return row[col_name].max()
+def nested_mean(row, col_name='col'):
+    return row[col_name].mean()
 
 def displacement(row):
     return math.sqrt(row['dx']**2 + row['dy']**2)
@@ -103,7 +103,7 @@ def load_data(path, f_set_name, X_in_dataframe=False, debug=False):
     datan = datan.drop(columns=['file'])
 
     # collapse class vector to a single value
-    datan['class'] = datan.apply(nested_max, axis=1, col_name='serum')
+    datan['class'] = datan.apply(nested_mean, axis=1, col_name='serum')
     # separate class vector...
     y = datan['class'].values
     
