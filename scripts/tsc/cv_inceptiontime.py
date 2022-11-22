@@ -121,7 +121,6 @@ def inceptiontime_cv(cv, X_inc, y_inc, y_true, groups, output_it, \
     verbose = False
 
     from classifiers import inception
-    classifier_keras = None
     def create_model():
         classifier_keras = inception.Classifier_INCEPTION(output_directory, input_shape, nb_classes, \
                                                       kernel_size=kernel_size, nb_epochs=epochs, \
@@ -217,8 +216,8 @@ def inceptiontime_cv(cv, X_inc, y_inc, y_true, groups, output_it, \
             (shap_deep, shap_grad) = get_shap_values(classifier.model_, \
                                                      X_train_scaled, \
                                                      X_val_scaled)
-            shap_deep_list.append(shap_deep[0])
-            shap_grad_list.append(shap_grad[0])
+            shap_deep_list.append(shap_deep[1])
+            shap_grad_list.append(shap_grad[1])
             X_test_list.append(X_val_scaled)
 
                
