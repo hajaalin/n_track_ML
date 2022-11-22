@@ -122,10 +122,10 @@ def inceptiontime_cv(cv, X_inc, y_inc, y_true, groups, output_it, \
 
     from classifiers import inception
     classifier_keras = None
-    classifier_keras = inception.Classifier_INCEPTION(output_directory, input_shape, nb_classes, \
+    def create_model():
+        classifier_keras = inception.Classifier_INCEPTION(output_directory, input_shape, nb_classes, \
                                                       kernel_size=kernel_size, nb_epochs=epochs, \
                                                       verbose=verbose)
-    def create_model():
         #print(classifier_keras.model)
         #classifier_keras.model.summary()
         return classifier_keras.model
