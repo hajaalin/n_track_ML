@@ -11,15 +11,13 @@ from sktime.datatypes._panel._convert import (
     from_nested_to_multi_index,
     from_nested_to_3d_numpy,
 )
-
+import sklearn
+import sktime
 import sys
 
 from utility import parse_config
 
-import sklearn
 print('sklearn ' + sklearn.__version__)
-
-import sktime
 print('sktime ' + sktime.__version__)
 
 
@@ -143,3 +141,4 @@ def test():
 if __name__ == "__main__":
 #    etl()
     test()
+
