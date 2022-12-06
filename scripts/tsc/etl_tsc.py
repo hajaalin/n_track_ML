@@ -132,8 +132,9 @@ def test():
     fset = 'all'
     X, y, groups, features, d1, d2 = load_data(raw_data_file, fset, debug=True)
 
-    print(X.shape)
-    print(y.shape)
+    #print('X.shape')
+    print('X.shape: ' + str(X.shape))
+    print('y.shape: ' + str(y.shape))
     print(features)
     print(groups.shape)
 
@@ -151,13 +152,13 @@ def test_ucr():
     '/proj/hajaalin/Projects/UCR_TS_Archive_2015/InlineSkate/InlineSkate_TRAIN'
     print('test_ucr: ' + file_name)
     x_train, y_train = readucr(file_name)
-    print(x_train.shape)
-    print(y_train.shape)
+    print('x_train.shape: ' + str(x_train.shape))
+    print('y_train.shape: ' + str(y_train.shape))
 # https://github.com/hajaalin/InceptionTime/blob/d518ebe04c4404e49bdb056aa4aa00ea6ba9bd26/main.py#L35
     if len(x_train.shape) == 2:  # if univariate
         # add a dimension to make it multivariate with one dimension
         x_train = x_train.reshape((x_train.shape[0], x_train.shape[1], 1))
-    print(x_train.shape)
+    print('x_train.shape: ' + str(x_train.shape))
 
     
 if __name__ == "__main__":
