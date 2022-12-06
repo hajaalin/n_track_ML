@@ -89,7 +89,7 @@ def get_shap_values(model_, X_train, X_test):
 '''
 Repeat cross-validation
 '''
-def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size=20, epochs=250, repeats=1,job_id='', save_shap_values=False, set_split_random_state=False):
+def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size=20, epochs=250, use_bottleneck=True, repeats=1,job_id='', save_shap_values=False, set_split_random_state=False, verbose=False):
     logger.info(fset)
     logger.debug("X: " + str(X.shape))
     logger.debug("y: " + str(y.shape))
@@ -100,7 +100,7 @@ def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size
     nb_classes = 2
     input_shape = X.shape[1:]
     batch_size = int(min(X.shape[0] / 10, 16))
-    verbose = False
+    #verbose = False
     print("input_shape")
     print(input_shape)
 
@@ -144,6 +144,8 @@ def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size
             clsfr = inception.Classifier_INCEPTION(output_it, \
                                                    input_shape, \
                                                    nb_classes, \
+                                                   batch_size=batch_size, \
+                                                   use_bottleneck=use_bottleneck, \
                                                    kernel_size=kernel_size, \
                                                    nb_epochs=epochs, \
                                                    verbose=verbose)
@@ -257,6 +259,7 @@ def shap2npy(fset, shap_lists_all, output_shap):
 @click.command()
 @click.option("--inceptiontime_dir", type=str)
 @click.option("--paths", type=str, default="paths.yml")
+@click.option("--use_bottleneck", is_flag=True, default=True)
 @click.option("--kernel_size", type=int, default=20)
 @click.option("--epochs", type=int, default=100)
 @click.option("--fset", type=click.Choice(fsets.keys()), default="f_mot_morph")
@@ -317,7 +320,7 @@ def cv_inceptiontime(inceptiontime_dir, paths, kernel_size, epochs, fset, repeat
     tic = time.perf_counter()
     
     logger.info("Start processing...")
-    scores, shap_lists_all = inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size=kernel_size, epochs=epochs, repeats=repeats, save_shap_values=save_shap_values, job_id=job_id)
+    scores, shap_lists_all = inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, use_bottleneck=use_bottleneck, kernel_size=kernel_size, epochs=epochs, repeats=repeats, save_shap_values=save_shap_values, job_id=job_id)
         
     toc = time.perf_counter()
     logger.info(f"Finished processing in {(toc-tic) / 60:0.1f} minutes.")
