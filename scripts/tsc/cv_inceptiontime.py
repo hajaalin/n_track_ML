@@ -24,43 +24,35 @@ logger = logging.getLogger(__name__)
 
 
 def get_standard_scaling(X):
-    logger.debug("get_standard_scaling")
-    logger.debug(X.shape)
+    print("get_standard_scaling")
+    print(X.shape)
     # X dimensions:
     # i: samples, ~200 series
-    # j: features, ~3-10 features
-    # k: the time series, ~30 steps
-    mean = np.mean(X,axis=(0,2))
-    std = np.std(X, axis=(0,2))
+    # j: the time series, ~30 steps
+    # k: features, ~3-10 features
+    mean = np.mean(X,axis=(0,1))
+    std = np.std(X, axis=(0,1))
 
-    logger.debug(mean.shape)
-    logger.debug(std.shape)
+    print(mean.shape)
+    print(std.shape)
     
     return mean,std
 
 def apply_standard_scaling(X,mean,std):
-    logger.debug("apply_standard_scaling")
-    logger.debug(X.shape)
+    print("apply_standard_scaling")
+    print(X.shape)
     # X dimensions:
     # i: samples, ~200 series
-    # j: features, ~3-10 features
-    # k: the time series, ~30 steps
+    # j: the time series, ~30 steps
+    # k: features, ~3-10 features
 
-    # transpose X so that features are on the trailing index
-    Xt = np.transpose(X,(0,2,1))
-    logger.debug(Xt.shape)
-
-    # transpose mean and std so that features are on the trailing index
-    mean = np.transpose(mean)
-    std = np.transpose(std)
-    logger.debug(mean.shape)
-    logger.debug(std.shape)
+    print(mean.shape)
+    print(std.shape)
     # trust numpy broadcasting
-    Xt = Xt - mean
+    Xt = X - mean
     Xt = Xt / std
 
-    Xt = np.transpose(Xt,(0,2,1))
-    logger.debug(Xt.shape)
+    print(Xt.shape)
 
     return Xt
 

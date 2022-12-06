@@ -108,6 +108,12 @@ def load_data(path, f_set_name, X_in_dataframe=False, debug=False):
     dfX = datan.drop(columns=['class', 'serum'])
     features = dfX.columns
     X = from_nested_to_3d_numpy(dfX)
+    print('X.shape: ' + str(X.shape))
+
+    # X is now shaped (instance, feature, timestep)
+    # reshape to (instance, timestep, feature)
+    X = np.transpose(X,(0,2,1))
+    print('X.shape: ' + str(X.shape))
 
     if X_in_dataframe:
         return dfX, y, groups
