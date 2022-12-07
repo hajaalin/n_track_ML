@@ -28,7 +28,7 @@ def displacement(row):
     return math.sqrt(row['dx']**2 + row['dy']**2)
 
 def angle(row):
-    return math.atan(row['dy'] / row['dx'])
+    return math.atan2(row['dy'], row['dx'])
 
 def add_features(df):
     df = df.copy()
