@@ -17,7 +17,7 @@ import time
 #tf.compat.v1.disable_v2_behavior() 
 
 from utility import parse_config
-from etl_tsc import load_data, fsets
+from load_data_tsc import load_data, fsets
 
 
 logger = logging.getLogger(__name__)
