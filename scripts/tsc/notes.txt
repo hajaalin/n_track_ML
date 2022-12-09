@@ -598,3 +598,125 @@ python create_sbatch.py --test --branch_i master --branch_n master --job_name $j
 
 srun --interactive -c4 --mem=4G -t04:00:00 -pgpu-oversub -Mukko --pty bash
 bash sbatch/test_code_cleanup_all_20221116/sbatch_test_code_cleanup_all_20221116.sh 
+
+
+
+##
+## 20221117
+##
+
+# suspect StratifiedFroupKFold is initialized stupidly, test fix
+
+# save X_test and accuracy lists, run more repetitions
+
+job="test_fix_sgkf"
+fset="all"
+ts="20221117"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --test --branch_i master --branch_n save_X_test --job_name $job_name --options "--fset $fset --kernel_size=20 --epochs=20 --repeats=20" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+srun --interactive -c4 --mem=4G -t04:00:00 -pgpu-oversub -Mukko --pty bash
+bash sbatch/test_fix_sgkf_all_20221117/sbatch_test_fix_sgkf_all_20221117.sh
+
+# repeat many times
+
+job="fix_sgkf"
+fset="all"
+ts="20221117"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n fix_sgkf --job_name $job_name --options "--fset $fset --kernel_size=20 --epochs=20 --repeats=1 --save_shap_values" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+for i in {1..250}
+do
+echo $i
+sbatch sbatch/fix_sgkf_all_20221117/sbatch_fix_sgkf_all_20221117.sh
+done
+
+
+##
+## 20221118
+##
+
+job="fix_sgkf"
+fset="all"
+ts="20221118"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n fix_sgkf --job_name $job_name --options "--fset $fset --kernel_size=20 --epochs=20 --repeats=50" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+for i in {1..50}
+do
+echo $i
+sbatch sbatch/fix_sgkf_all_20221118/sbatch_fix_sgkf_all_20221118.sh
+done
+
+
+##
+## 20221122
+##
+
+# test rewrite
+
+job="test_rewrite"
+fset="all"
+ts="20221122"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --test --branch_i master --branch_n save_X_test --job_name $job_name --options "--fset $fset --kernel_size=20 --epochs=20 --repeats=3" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+srun --interactive -c4 --mem=4G -t04:00:00 -pgpu-oversub -Mukko --pty bash
+bash sbatch/test_rewrite_all_20221122/sbatch_test_rewrite_all_20221122.sh
+
+
+# loop epochs
+
+job="re_k20"
+fset="all"
+ts="20221122"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n re_loop --job_name $job_name --loop_epochs 2 80 2 --options "--fset $fset --kernel_size=20 --repeats=50" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+for s in $(ls sbatch/re_k20_all_20221122/*.sh); do sbatch $s; done;
+
+
+# test manually tweaked kernel_size set
+
+job="test_kman"
+fset="all"
+ts="20221122"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --test --branch_i master --branch_n save_X_test --job_name $job_name --loop_epochs 2 50 2 --options "--fset $fset --kernel_size=20 --repeats=3" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+
+for s in $(ls sbatch/test_kman_all_20221122/*.sh); do sbatch $s; done;
+
+
+##
+## 20220609
+##
+
+# test before code review
+
+job="test_pre_lassi"
+fset="all"
+ts="20220609"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --test --branch_i master --branch_n save_X_test --job_name $job_name --loop_epochs 2 50 2 --options "--fset $fset --kernel_size=20 --repeats=3" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+srun --interactive -c4 --mem=4G -t04:00:00 -pgpu-oversub -Mukko --pty bash
+bash sbatch/test_pre_lassi_all_20220609/sbatch_test_pre_lassi_all_20220609_e2.sh
+
+
+job="k20_reshape_input"
+fset="all"
+ts="20221209"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n reshape_input --job_name $job_name --loop_epochs 2 50 2 --options "--fset $fset --kernel_size=20 --repeats=20" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+for s in $(ls sbatch/k20_reshape_input_all_20221209/*.sh); do sbatch $s; done;

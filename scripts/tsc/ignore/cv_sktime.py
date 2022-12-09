@@ -11,7 +11,7 @@ from sklearn.model_selection import StratifiedGroupKFold
 import warnings
 warnings.simplefilter(action='ignore', category=sklearn.exceptions.UndefinedMetricWarning)
 
-from etl_tsc import load_data, get_X_dfX_y_groups, fsets
+from etl_tsc import load_data, get_X_y_groups, fsets
 from normalization import get_standard_scaling, apply_standard_scaling
 
 #logger = None
@@ -25,57 +25,50 @@ def format_scores_df(scores):
     #print(scores.mean())
     #print(scores.std())
     return scores
-
-
-def cv_single_with_norm(classifier, X, y, groups, cv):
-    columns = ['accuracy','precision','recall','f1']
-    scores = pd.DataFrame(columns=columns)
-    for train_index,val_index in cv.split(X,y,groups):
-        # scale training data to mean,std 0,1
-        mean,std = get_standard_scaling(X[train_index])
-        logger.debug("mean:")
-        logger.debug(mean)
-        logger.debug("std:")
-        logger.debug(std)
-        X_train_scaled = apply_standard_scaling(X[train_index],mean,std)
-        
-        classifier.fit(X_train_scaled, y[train_index])
-
-        # scale validation data to mean,std 0,1
-        X_val_scaled = apply_standard_scaling(X[val_index],mean,std)
-        pred = classifier.predict(X_val_scaled)
-
-        truth = y[val_index]
-        #print('truth')
-        #print(truth)
-        #print('pred')
-        #print(pred)
-
-        # get fold accuracy and append
-        fold_acc = accuracy_score(truth, pred)
-        fold_prc = precision_score(truth, pred)
-        fold_rec = recall_score(truth, pred)
-        fold_f1 = f1_score(truth, pred)
-        scores.loc[len(scores)] = [fold_acc,fold_prc,fold_rec,fold_f1]
-
-    return scores
     
     
-def cv_sgkf(classifier, X, y, groups, repeats=10):
+def cv_sgkf(classifier, X, y, groups, fset, repeats=1):
     cv = StratifiedGroupKFold(n_splits=4, shuffle=True)
     #print(classifier)
     #print(cv)
 
     scores_all = []
+    columns = ['accuracy','precision','recall','f1']
+    scores = pd.DataFrame(columns=columns)
+
     for i in range(repeats):
-        scores = cv_single_with_norm(classifier, X, y, groups, cv)
-        #scores = cross_validate(classifier, X, y, cv=cv, scoring=scoring, groups=groups)
-        #scores_all.append(pd.DataFrame.from_dict(scores))
-        scores_all.append(scores)
-    
-    scores = pd.concat(scores_all)
+        for train_index,val_index in cv.split(X,y,groups):
+            # scale training data to mean,std 0,1
+            mean,std = get_standard_scaling(X[train_index])
+            logger.debug("mean:")
+            logger.debug(mean)
+            logger.debug("std:")
+            logger.debug(std)
+            X_train_scaled = apply_standard_scaling(X[train_index],mean,std)
+
+            classifier.fit(X_train_scaled, y[train_index])
+
+            # scale validation data to mean,std 0,1
+            X_val_scaled = apply_standard_scaling(X[val_index],mean,std)
+            pred = classifier.predict(X_val_scaled)
+
+            truth = y[val_index]
+            #print('truth')
+            #print(truth)
+            #print('pred')
+            #print(pred)
+
+            # get fold accuracy and append
+            fold_acc = accuracy_score(truth, pred)
+            fold_prc = precision_score(truth, pred)
+            fold_rec = recall_score(truth, pred)
+            fold_f1 = f1_score(truth, pred)
+            scores.loc[len(scores)] = [fold_acc,fold_prc,fold_rec,fold_f1]
+
     #scores = format_scores_df(scores)
     scores['cv'] = str(cv)
+    scores['classifier'] = classifier
+    scores['fset'] = fset
     
     return scores
 
@@ -85,7 +78,7 @@ def cv_sgkf(classifier, X, y, groups, repeats=10):
 
 from sktime.classification.distance_based import KNeighborsTimeSeriesClassifier
 
-def run_kneighbors(data, n_neighbors=5, repeats=20):
+def run_kneighbors(data_file, n_neighbors=5, repeats=20):
     logger.info("run_kneighbors")
     classifier = KNeighborsTimeSeriesClassifier(n_neighbors=n_neighbors)
 
@@ -93,7 +86,7 @@ def run_kneighbors(data, n_neighbors=5, repeats=20):
     for fset in fsets.keys():
         logger.debug("run_kneighbors: fset: " + fset)
         #X, dfX, y, groups, debug_polar, debug_data = prepare_Xy(data, fset)
-        X, dfX, y, groups, debugm, debugn = get_X_dfX_y_groups(data, fset)
+        X, y, groups, features = load_data(data_file, fset)
 
         logger.debug("run_kneighbors: shape X: " + str(X.shape))
         logger.debug("run_kneighbors: shape y: " + str(y.shape))
@@ -209,6 +202,7 @@ def cv_sktime(paths, config, job_name, job_id):
     # read the data 
     data_dir = paths["data"]["dir"]
     raw_data_file = paths["data"]["raw_data_file"]
+    raw_data_file = Path(data_dir) / raw_data_file
 
     data = load_data(Path(data_dir) / raw_data_file)
     logger.info('Loaded data shape: ' + str(data.shape))
@@ -219,12 +213,12 @@ def cv_sktime(paths, config, job_name, job_id):
     # run KNeighbors
     n_neighbors = config["kneighbors"]["n_neighbors"]
     repeats = config["kneighbors"]["repeats"]
-    scores = run_kneighbors(data, n_neighbors, repeats)
+    scores = run_kneighbors(raw_data_file, n_neighbors, repeats)
     scores_all.append(scores)
 
     # run Rocket
     repeats = config["rocket"]["repeats"]
-    scores = run_rocket(data, repeats)
+    scores = run_rocket(raw_data_file, repeats)
     scores_all.append(scores)
 
 
