@@ -260,7 +260,7 @@ def shap2npy(fset, shap_lists_all, output_shap):
 @click.option("--job_name", type=str, default="tsc_it")
 @click.option("--job_id", type=str)
 @click.option("--now", type=str)
-def cv_inceptiontime(inceptiontime_dir, paths, kernel_size, epochs, fset, repeats, save_shap_values, job_name, job_id, now):
+def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, kernel_size, epochs, fset, repeats, save_shap_values, job_name, job_id, now):
     paths = parse_config(paths)
 
     log_dir = Path(paths["log"]["tsc"]) / job_name / now
