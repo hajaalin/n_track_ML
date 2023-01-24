@@ -12,6 +12,8 @@ from sklearn.preprocessing import OneHotEncoder
 import sys
 import tensorflow as tf
 import time
+from tsaug import AddNoise, Drift, Dropout, Pool, Quantize, TimeWarp
+
 # https://stackoverflow.com/questions/66814523/shap-deepexplainer-with-tensorflow-2-4-error
 #from tensorflow.compat.v1.keras.backend import get_session
 #tf.compat.v1.disable_v2_behavior() 
@@ -75,13 +77,35 @@ def get_shap_values(model_, X_train, X_test):
     shap_values_grad = explainer.shap_values(X_test)
 
     return (shap_values_deep, shap_values_grad)
-   
+
+    
+def augment(X, y):
+
+    aug = (
+        AddNoise(scale=0.1) * 100
+        # there are several augmenters available, but let's keep it simple...
+        #+ Dropout() * 2
+        #+ Pool() * 2
+        #+ Quantize(n_levels=20) *2
+    )
+    # this is how many new instances we get (have to multiply y accordingly)
+    # add the multipliers for individual augmenters in use
+    m = np.prod(np.asarray([100]))
+
+    X_aug = aug.augment(X)
+    y_aug = np.repeat(y, m)
+
+    # add the originals
+    X_aug = np.append(X, X_aug, axis=0)
+    y_aug = np.append(y, y_aug, axis=0)
+
+    return X_aug, y_aug
 
 
 '''
 Repeat cross-validation
 '''
-def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size=20, epochs=250, use_bottleneck=True, repeats=1,job_id='', save_shap_values=False, set_split_random_state=False, verbose=False):
+def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size=20, kernels=[], epochs=250, use_bottleneck=True, repeats=1,job_id='', save_shap_values=False, set_split_random_state=False, verbose=False, augment_data=False):
     logger.info(fset)
     logger.debug("X: " + str(X.shape))
     logger.debug("y: " + str(y.shape))
@@ -100,12 +124,6 @@ def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size
     # save original y 
     y_true = y.astype(np.int64)
     
-    # transform the labels from integers to one hot vectors
-    # https://github.com/hajaalin/InceptionTime/blob/f3fd6c5e9298ec9ca5d0fc594bb07dd1decc3718/main.py#L15
-    enc = OneHotEncoder()
-    enc.fit(np.concatenate((y,), axis=0).reshape(-1, 1))
-    y = enc.transform(y.reshape(-1, 1)).toarray()
-
     
     # columns recorded for each round of cross-validation
     columns = ['accuracy','precision','recall','f1','repeat']
@@ -139,6 +157,7 @@ def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size
                                                    batch_size=batch_size, \
                                                    use_bottleneck=use_bottleneck, \
                                                    kernel_size=kernel_size, \
+                                                   kernels=kernels, \
                                                    nb_epochs=epochs, \
                                                    verbose=verbose)
             #print(clsfr.model)
@@ -157,32 +176,52 @@ def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size
             #print(y_true[train_index])
             #print(y_inc[train_index])
             #break
+            X_train = X[train_index]
+            y_train = y[train_index]
+            X_val = X[val_index]
+            y_val = y[val_index]
+            truth = y_true[val_index]
+            print("check shapes 1")
+            print("X_train.shape: " + str(X_train.shape))
+            print("y_train.shape: " + str(y_train.shape))
+            print("X_val.shape: " + str(X_val.shape))
+            print("y_val.shape: " + str(y_val.shape))
+            print("truth.shape: " + str(truth.shape))
+
+            if augment_data:
+                X_train, y_train = augment(X_train, y_train)
 
             # scale training data to mean,std 0,1
-            mean,std = get_standard_scaling(X[train_index])
+            mean,std = get_standard_scaling(X_train)
             logger.debug("mean:")
             logger.debug(mean)
             logger.debug("std:")
             logger.debug(std)
-            X_train_scaled = apply_standard_scaling(X[train_index],mean,std)
-            print("check scaled shape")
-            print(X[train_index].shape)
-            print(X_train_scaled.shape)
-            #logger.debug("scaled2")
-            #logger.debug(X_train_scaled)
+
+            X_train_scaled = apply_standard_scaling(X_train,mean,std)
+            print("check shapes 2")
+            print("X_train.shape: " + str(X_train.shape))
+            print("X_train_scaled.shape: " + str(X_train_scaled.shape))
+            print("y_train.shape: " + str(y_train.shape))
+
+
+            # transform the labels from integers to one hot vectors
+            # https://github.com/hajaalin/InceptionTime/blob/f3fd6c5e9298ec9ca5d0fc594bb07dd1decc3718/main.py#L15
+            enc = OneHotEncoder()
+            enc.fit(np.concatenate((y_train,), axis=0).reshape(-1, 1))
+            y_train = enc.transform(y_train.reshape(-1, 1)).toarray()
+            print("y_train.shape (one-hot): " + str(y_train.shape))
 
             classifier = KerasClassifier(model=create_model(), \
                                          epochs=epochs, \
                                          batch_size=batch_size, \
                                          verbose=verbose)
-            classifier.fit(X_train_scaled, y[train_index])
+            classifier.fit(X_train_scaled, y_train)
 
             # scale validation data to mean,std 0,1
             #X_val_scaled = standard_scale_x_by_series(X_inc[val_index])
-            X_val_scaled = apply_standard_scaling(X[val_index],mean,std)
+            X_val_scaled = apply_standard_scaling(X_val,mean,std)
             pred = classifier.predict(X_val_scaled)
-
-            truth = y_true[val_index]
 
             #print('truth')
             #print(truth)
@@ -221,12 +260,15 @@ def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size
     scores['cv'] = str(cv)
     scores['classifier'] = 'InceptionTime'
     scores['fset'] = fset
-    scores['kernel_size'] = kernel_size
+    kernel_info = str(kernel_size)
+    if len(kernels) > 0:
+        kernel_info = "_".join([str(x) for x in kernels])
+    scores['kernel_size'] = kernel_info
     scores['epochs'] = epochs
     scores['job_id'] = job_id
 
 
-    logger.info(f"inceptiontime_cv_repeat: %s feature_set:%s, kernel_size:%d, epochs:%d, accuracy:%f0.00" % (str(cv), fset, kernel_size, epochs, scores['accuracy'].mean()))
+    logger.info(f"inceptiontime_cv_repeat: %s feature_set:%s, kernel_info:%s, epochs:%d, accuracy:%f0.00" % (str(cv), fset, kernel_info, epochs, scores['accuracy'].mean()))
 
     lists_all = (list_accuracy, list_idx_train, list_idx_test, \
                  list_shap_deep, list_shap_grad, list_X_test)
@@ -253,14 +295,16 @@ def shap2npy(fset, shap_lists_all, output_shap):
 @click.option("--paths", type=str, default="paths.yml")
 @click.option("--use_bottleneck", is_flag=True, default=True)
 @click.option("--kernel_size", type=int, default=20)
+@click.option("--kernels", "-k", multiple=True, type=int, default=[])
 @click.option("--epochs", type=int, default=100)
 @click.option("--fset", type=click.Choice(fsets.keys()), default="f_mot_morph")
 @click.option("--repeats", type=int, default=20)
 @click.option("--save_shap_values", is_flag=True, default=False)
+@click.option("--verbose", is_flag=True, default=False)
 @click.option("--job_name", type=str, default="tsc_it")
 @click.option("--job_id", type=str)
 @click.option("--now", type=str)
-def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, kernel_size, epochs, fset, repeats, save_shap_values, job_name, job_id, now):
+def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, kernel_size, kernels, epochs, fset, repeats, save_shap_values, verbose, job_name, job_id, now):
     paths = parse_config(paths)
 
     log_dir = Path(paths["log"]["tsc"]) / job_name / now
@@ -312,12 +356,17 @@ def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, kernel_size, epoc
     tic = time.perf_counter()
     
     logger.info("Start processing...")
-    scores, shap_lists_all = inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, use_bottleneck=use_bottleneck, kernel_size=kernel_size, epochs=epochs, repeats=repeats, save_shap_values=save_shap_values, job_id=job_id)
+    scores, shap_lists_all = inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, use_bottleneck=use_bottleneck, kernel_size=kernel_size, kernels=kernels, epochs=epochs, repeats=repeats, save_shap_values=save_shap_values, verbose=verbose, job_id=job_id)
         
     toc = time.perf_counter()
     logger.info(f"Finished processing in {(toc-tic) / 60:0.1f} minutes.")
-            
-    scores_file = "cv_" + job_name + "_k" + str(kernel_size) + "_e" + str(epochs) + "_" + now + ".csv"
+
+    print(kernels)
+    kernel_info = str(kernel_size)
+    if len(kernels) > 0:
+        kernel_info = "_".join([str(x) for x in kernels])
+    print(kernel_info)
+    scores_file = "cv_" + job_name + "_k" + kernel_info + "_e" + str(epochs) + "_" + now + ".csv"
     scores_file = output_cv / scores_file
     scores.to_csv(scores_file, index=False)
     logger.info("Wrote scores to " + str(scores_file))
