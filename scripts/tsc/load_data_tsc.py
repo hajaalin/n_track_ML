@@ -58,7 +58,7 @@ fsets['D_A_P'] =         fs + ['D', 'A', 'P']
 fsets['D_t'] =           fs + ['D', 't']
 fsets['D_t_dt'] =        fs + ['D', 'dt']
 fsets['D_Dist_t_dt_A'] = fs + ['D', 'Dist', 't','dt', 'A']
-fsets['all'] =           fs + ['D', 'A', 'P', 'Dist', 't','dt']
+fsets['all'] =           fs + ['D', 'A', 'P', 'Dist', 'dt']
 
 
 def load_data(path, f_set_name, X_in_dataframe=False, debug=False):
