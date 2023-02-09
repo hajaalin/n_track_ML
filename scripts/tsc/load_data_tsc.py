@@ -43,6 +43,11 @@ def add_features(df):
     # direction (t for theta)
     df['t'] = df.apply(angle, axis=1)
     df['dt'] = df['t'].diff()
+
+    # fix weirdness if change in theta is more than pi
+    df.loc[df['dt'] > math.pi, 'dt'] = df['dt'] - 2 * math.pi
+    df.loc[df['dt'] < -math.pi, 'dt'] = df['dt'] + 2 * math.pi
+
     df = df[df['frame']!=1]
   
     return df
