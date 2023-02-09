@@ -9,7 +9,7 @@ ls -la 			    list all (incl hidden)
 conda env list		to check the environments
 which python 		to check version
 ctrl D			    to exit python (back to bash or stop whole session)
-source ~/.bashrc	run every time after login
+source ~/.bashrc	run every time after login (not really, not for Jupyter)
 shift insert  		paste in putty
 
 /home/redchuk = $HOME		home directory (small, not appropriate to store stuff)
@@ -21,9 +21,13 @@ shift insert  		paste in putty
 
 srun --interactive -c4 --mem=4G -t04:00:00 -pgpu-oversub -Mukko --pty bash		starts an interactive session on ukko cluster
 \\turso-fs.cs.helsinki.fi\								                        open cluster dirs from win
+hub.cs.helsinki.fi      hy jupyter hub
 
 
-
+----------------------------------
+import sys          instead of modifying the script every time for interactive session?
+sys.argv[1]         no spaces arguments from system command line (python filename.py argument1 ...)
+argparse            alternative
 
 -----------------------------------
 Hi Taras,
