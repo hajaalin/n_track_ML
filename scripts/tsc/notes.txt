@@ -786,3 +786,34 @@ do
 echo $i
 sbatch sbatch/shap_all_20230126/sbatch_shap_all_20230126.sh
 done
+
+
+##
+## 20220209
+##
+
+# mass-produce shap values
+
+# only 1 repeat in per job
+
+job="test_shap"
+fset="all"
+ts="20230209"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --test --branch_i master --branch_n test_kernels --job_name $job_name --options "--fset $fset -k 3 -k 8 -k 17 --epochs=20 --repeats=1 --save_shap_values" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+job="shap"
+fset="all"
+ts="20230209"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n test_kernels --job_name $job_name --options "--fset $fset -k 3 -k 8 -k 17 --epochs=20 --repeats=1 --save_shap_values" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+for i in {1..20}
+do
+echo $i
+sbatch sbatch/shap_all_20230209/sbatch_shap_all_20230209.sh
+done
+
+
