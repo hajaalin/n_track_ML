@@ -295,7 +295,7 @@ def shap2npy(fset, shap_lists_all, output_shap):
 @click.command()
 @click.option("--inceptiontime_dir", type=str)
 @click.option("--paths", type=str, default="paths.yml")
-@click.option("--use_bottleneck", is_flag=True, default=True)
+@click.option("--use_bottleneck", type=bool, default=True)
 @click.option("--nb_filters", type=int, default=32)
 @click.option("--depth", type=int, default=6)
 @click.option("--kernel_size", type=int, default=20)
