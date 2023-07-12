@@ -105,7 +105,7 @@ def augment(X, y):
 '''
 Repeat cross-validation
 '''
-def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size=20, kernels=[], epochs=250, use_bottleneck=True, nb_filters=32, depth=6, repeats=1,job_id='', save_shap_values=False, set_split_random_state=False, verbose=False, augment_data=False):
+def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size=20, kernels=[], epochs=250, use_bottleneck=True, nb_filters=32, depth=6, optimizer='Adam', learning_rate=0.001, repeats=1,job_id='', save_shap_values=False, set_split_random_state=False, verbose=False, augment_data=False):
     logger.info(fset)
     logger.debug("X: " + str(X.shape))
     logger.debug("y: " + str(y.shape))
@@ -161,6 +161,8 @@ def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size
                                                    kernel_size=kernel_size, \
                                                    kernels=kernels, \
                                                    nb_epochs=epochs, \
+                                                   optimizer=optimizer, \
+                                                   learning_rate=learning_rate, \
                                                    verbose=verbose)
             #print(clsfr.model)
             #clsfr.model.summary()
@@ -301,6 +303,8 @@ def shap2npy(fset, shap_lists_all, output_shap):
 @click.option("--kernel_size", type=int, default=20)
 @click.option("--kernels", "-k", multiple=True, type=int, default=[])
 @click.option("--epochs", type=int, default=100)
+@click.option("--optimizer", type=str, default='Adam')
+@click.option("--learning_rate", type=float, default=0.001)
 @click.option("--fset", type=click.Choice(fsets.keys()), default="f_mot_morph")
 @click.option("--repeats", type=int, default=20)
 @click.option("--save_shap_values", is_flag=True, default=False)
@@ -308,7 +312,7 @@ def shap2npy(fset, shap_lists_all, output_shap):
 @click.option("--job_name", type=str, default="tsc_it")
 @click.option("--job_id", type=str)
 @click.option("--now", type=str)
-def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, nb_filters, depth, kernel_size, kernels, epochs, fset, repeats, save_shap_values, verbose, job_name, job_id, now):
+def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, nb_filters, depth, kernel_size, kernels, epochs, optimizer, learning_rate, fset, repeats, save_shap_values, verbose, job_name, job_id, now):
     paths = parse_config(paths)
 
     log_dir = Path(paths["log"]["tsc"]) / job_name / now
@@ -367,6 +371,8 @@ def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, nb_filters, depth
                                                      kernel_size=kernel_size,
                                                      kernels=kernels,
                                                      epochs=epochs,
+                                                     optimizer=optimizer,
+                                                     learning_rate=learning_rate,
                                                      repeats=repeats,
                                                      save_shap_values=save_shap_values,
                                                      verbose=verbose,
