@@ -105,7 +105,7 @@ def augment(X, y):
 '''
 Repeat cross-validation
 '''
-def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size=20, kernels=[], epochs=250, use_bottleneck=True, nb_filters=32, depth=6, optimizer='Adam', learning_rate=0.001, repeats=1,job_id='', save_shap_values=False, set_split_random_state=False, verbose=False, augment_data=False):
+def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size=20, kernels=[], epochs=250, use_bottleneck=True, bottleneck_size=32, nb_filters=32, depth=6, optimizer='Adam', learning_rate=0.001, repeats=1,job_id='', save_shap_values=False, set_split_random_state=False, verbose=False, augment_data=False):
     logger.info(fset)
     logger.debug("X: " + str(X.shape))
     logger.debug("y: " + str(y.shape))
@@ -156,6 +156,7 @@ def inceptiontime_cv_repeat(X, y, groups, features, output_it, fset, kernel_size
                                                    nb_classes, \
                                                    batch_size=batch_size, \
                                                    use_bottleneck=use_bottleneck, \
+                                                   bottleneck_size=bottleneck_size, \
                                                    nb_filters=nb_filters, \
                                                    depth=depth, \
                                                    kernel_size=kernel_size, \
@@ -298,6 +299,7 @@ def shap2npy(fset, shap_lists_all, output_shap):
 @click.option("--inceptiontime_dir", type=str)
 @click.option("--paths", type=str, default="paths.yml")
 @click.option("--use_bottleneck", type=bool, default=True)
+@click.option("--bottleneck_size", type=int, default=32)
 @click.option("--nb_filters", type=int, default=32)
 @click.option("--depth", type=int, default=6)
 @click.option("--kernel_size", type=int, default=20)
@@ -312,7 +314,7 @@ def shap2npy(fset, shap_lists_all, output_shap):
 @click.option("--job_name", type=str, default="tsc_it")
 @click.option("--job_id", type=str)
 @click.option("--now", type=str)
-def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, nb_filters, depth, kernel_size, kernels, epochs, optimizer, learning_rate, fset, repeats, save_shap_values, verbose, job_name, job_id, now):
+def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, bottleneck_size, nb_filters, depth, kernel_size, kernels, epochs, optimizer, learning_rate, fset, repeats, save_shap_values, verbose, job_name, job_id, now):
     paths = parse_config(paths)
 
     log_dir = Path(paths["log"]["tsc"]) / job_name / now
@@ -368,6 +370,7 @@ def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, nb_filters, depth
                                                      nb_filters=nb_filters,
                                                      depth=depth,
                                                      use_bottleneck=use_bottleneck,
+                                                     bottleneck_size=bottleneck_size,
                                                      kernel_size=kernel_size,
                                                      kernels=kernels,
                                                      epochs=epochs,
