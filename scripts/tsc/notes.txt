@@ -902,7 +902,7 @@ ts="20230620"
 job_name="${job}_${fset}_${ts}"
 echo $job_name
 python create_sbatch.py --test --branch_i master --branch_n master --job_name $job_name --loop_epochs 2 80 2 --options "--fset $fset --depth 1 --nb_filters 16 -k 3 -k 14 -k 28 --repeats=20 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
-
+w
 for s in $(ls sbatch/le_k3_14_28_depth1_nf16_all_20230620/*.sh); do sbatch $s; done;
 
 
@@ -977,3 +977,228 @@ for s in $(ls sbatch/le_k2_4_8_depth1_all_20230627/*.sh); do sbatch $s; done;
 for s in $(ls sbatch/le_k2_4_8_depth1_nobn_all_20230627/*.sh); do sbatch $s; done;
 for s in $(ls sbatch/le_k4_8_16_depth1_all_20230627/*.sh); do sbatch $s; done;
 for s in $(ls sbatch/le_k4_8_16_depth1_nobn_all_20230627/*.sh); do sbatch $s; done;
+
+
+# mass-produce SHAP values
+
+job="shap"
+fset="all"
+ts="20230627"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --options "--fset $fset -k 2 -k 4 -k 8 --use_bottleneck=False --epochs=10 --repeats=1 --save_shap_values" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+for i in {1..50}
+do
+echo $i
+sbatch sbatch/shap_all_20230627/sbatch_shap_all_20230627.sh
+done
+
+
+
+#
+# 20230704
+#
+
+# more epochs for the smallest model
+
+job="le_k2_4_8_depth1_nobn"
+fset="all"
+ts="20230704"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 1 --options "--fset $fset --depth 1 --use_bottleneck=False -k 2 -k 4 -k 8 --repeats=20 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+
+for s in $(ls sbatch/le_k2_4_8_depth1_nobn_all_20230704/*.sh); do sbatch $s; done;
+
+
+
+##
+## 20230712
+##
+
+# test another optimizer
+
+job="test_k3_14_28_depth1_adadelta"
+fset="all"
+ts="20230712"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --test --job_name $job_name --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --optimizer=Adadelta --learning_rate=1.0 --epochs=10 --repeats=2 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+srun --interactive -c4 --mem=4G -t04:00:00 -pgpu-oversub -Mukko --pty bash
+
+# seems to work, commit...
+
+##
+## 20230713
+##
+
+# test also param for bottleneck_size
+
+job="test_k3_14_28_depth1_adadelta_bn5"
+fset="all"
+ts="20230713"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --test --job_name $job_name --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=True --bottleneck_size=5 --optimizer=Adadelta --learning_rate=1.0 --epochs=10 --repeats=2 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+
+# plan with Taras:
+
+
+    3,14,28 and 100 cv reps everywhere
+    1. depth 1, BN
+    2. depth 2, BN 
+    3. depth 2, BN, 5 filters (I just realized that the same filter number applies to both bottleneck and convolutions filter?)
+    4. depth 1, noBN
+    5. depth 2, noBN
+    6. depth 2, noBN, 5 filters
+
+
+job="test_k3_14_28_depth1_bn"
+fset="all"
+ts="20230713"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=True --repeats=100 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+job="test_k3_14_28_depth2_bn"
+fset="all"
+ts="20230713"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 2 -k 3 -k 14 -k 28 --use_bottleneck=True --repeats=100 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+job="test_k3_14_28_depth2_bn5"
+fset="all"
+ts="20230713"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 2 -k 3 -k 14 -k 28 --use_bottleneck=True --bottleneck_size=5 --repeats=100 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+
+job="test_k3_14_28_depth1_nobn"
+fset="all"
+ts="20230713"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=False --repeats=100 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+job="test_k3_14_28_depth2_nobn"
+fset="all"
+ts="20230713"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 2 -k 3 -k 14 -k 28 --use_bottleneck=False --repeats=100 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+job="test_k3_14_28_depth2_nobn_f5"
+fset="all"
+ts="20230713"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 2 -k 3 -k 14 -k 28 --use_bottleneck=False --nb_filters=5 --repeats=100 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+
+for s in $(ls sbatch/test_k3_14_28_depth1_bn_all_20230713/*.sh); do sbatch $s; done;
+for s in $(ls sbatch/test_k3_14_28_depth2_bn_all_20230713/*.sh); do sbatch $s; done;
+for s in $(ls sbatch/test_k3_14_28_depth2_bn5_all_20230713/*.sh); do sbatch $s; done;
+for s in $(ls sbatch/test_k3_14_28_depth1_nobn_all_20230713/*.sh); do sbatch $s; done;
+for s in $(ls sbatch/test_k3_14_28_depth2_nobn_all_20230713/*.sh); do sbatch $s; done;
+for s in $(ls sbatch/test_k3_14_28_depth2_nobn_f5_all_20230713/*.sh); do sbatch $s; done;
+
+
+##
+## 20230714
+##
+
+## test learning rates and Adadelta
+
+job="k3_14_28_depth1_nobn_adam01"
+fset="all"
+ts="20230714"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=False --optimizer=Adam --learning_rate=0.1 --repeats=20 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+job="k3_14_28_depth1_nobn_adam001"
+fset="all"
+ts="20230714"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=False --optimizer=Adam --learning_rate=0.01 --repeats=20 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+job="k3_14_28_depth1_nobn_adam0001"
+fset="all"
+ts="20230714"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=False --optimizer=Adam --learning_rate=0.001 --repeats=20 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+job="k3_14_28_depth1_nobn_adam00001"
+fset="all"
+ts="20230714"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=False --optimizer=Adam --learning_rate=0.0001 --repeats=20 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+job="k3_14_28_depth1_nobn_adadelta1"
+fset="all"
+ts="20230714"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=False --optimizer=Adadelta --learning_rate=1 --repeats=20 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+job="k3_14_28_depth1_nobn_adadelta01"
+fset="all"
+ts="20230714"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=False --optimizer=Adadelta --learning_rate=0.1 --repeats=20 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+job="k3_14_28_depth1_nobn_adadelta001"
+fset="all"
+ts="20230714"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=False --optimizer=Adadelta --learning_rate=0.01 --repeats=20 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+for s in $(ls sbatch/k3_14_28_depth1_nobn_adam01_all_20230714/*.sh); do sbatch $s; done;
+for s in $(ls sbatch/k3_14_28_depth1_nobn_adam001_all_20230714/*.sh); do sbatch $s; done;
+for s in $(ls sbatch/k3_14_28_depth1_nobn_adam0001_all_20230714/*.sh); do sbatch $s; done;
+for s in $(ls sbatch/k3_14_28_depth1_nobn_adam00001_all_20230714/*.sh); do sbatch $s; done;
+for s in $(ls sbatch/k3_14_28_depth1_nobn_adadelta1_all_20230714/*.sh); do sbatch $s; done;
+for s in $(ls sbatch/k3_14_28_depth1_nobn_adadelta01_all_20230714/*.sh); do sbatch $s; done;
+for s in $(ls sbatch/k3_14_28_depth1_nobn_adadelta001_all_20230714/*.sh); do sbatch $s; done;
+
+
+# tweaked reduce_lr callback in inceptiontime, test...
+
+job="testing_k3_14_28_depth1_nobn_adam001"
+fset="all"
+ts="20230714"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --test --job_name $job_name --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=False --optimizer=Adam --learning_rate=0.01 --repeats=2 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+# works, commit
+
+# now rerun Adam 0.0001 and add Adam 0.00001
+
+job="k3_14_28_depth1_nobn_adam00001b"
+fset="all"
+ts="20230714"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=False --optimizer=Adam --learning_rate=0.0001 --repeats=20 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+job="k3_14_28_depth1_nobn_adam000001"
+fset="all"
+ts="20230714"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --loop_epochs 1 200 3 --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=False --optimizer=Adam --learning_rate=0.00001 --repeats=20 --verbose" --sbatch_dir sbatch/$job_name --paths /proj/hajaalin/Projects/n_track_ML/scripts/tsc/paths.yml
+
+for s in $(ls sbatch/k3_14_28_depth1_nobn_adam00001b_all_20230714/*.sh); do sbatch $s; done;
+for s in $(ls sbatch/k3_14_28_depth1_nobn_adam000001_all_20230714/*.sh); do sbatch $s; done;
