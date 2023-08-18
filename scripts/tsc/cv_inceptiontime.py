@@ -317,11 +317,11 @@ def shap2npy(fset, shap_lists_all, output_shap):
 def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, bottleneck_size, nb_filters, depth, kernel_size, kernels, epochs, optimizer, learning_rate, fset, repeats, save_shap_values, verbose, job_name, job_id, now):
     paths = parse_config(paths)
 
-    log_dir = Path(paths["log"]["tsc"]) / job_name / now
-    log_dir.mkdir(parents=True, exist_ok=True)
-
     if not now:
         now = datetime.now().strftime("%Y%m%d%H%M%S")
+
+    log_dir = Path(paths["log"]["tsc"]) / job_name / now
+    log_dir.mkdir(parents=True, exist_ok=True)
 
     # configure logger
     log_file = log_dir / (f"cv_inceptiontime_%s_%s_%s.log" % (job_name, now, job_id))
