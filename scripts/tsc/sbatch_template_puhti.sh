@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 
-#SBATCH --account=hy7004
+#SBATCH --account=tanhuanp
 #SBATCH --job-name={{ job_name }}
 #SBATCH --partition=gpu
 #SBATCH --ntasks=1
