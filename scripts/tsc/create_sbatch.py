@@ -1,50 +1,9 @@
 import click
 from datetime import datetime
-from jinja2 import Environment
+import jinja2
 from pathlib import Path, PosixPath
 import re
 import subprocess
-
-BASH = """#!/bin/bash
-#
-
-#SBATCH --job-name={{ job_name }}
-#SBATCH -M {{ cluster }}
-#SBATCH -n 1
-#SBATCH -c 1
-#SBATCH --ntasks-per-node=1
-#SBATCH --mem-per-cpu=1000
-#SBATCH -p {{ partition }}
-#SBATCH --gres=gpu:1
-
-# Time limit
-#SBATCH -t {{ time }}
-
-#SBATCH --chdir={{ job_dir }}
-#SBATCH --output={{ job_name }}-%j.out
-
-
-# Load the Conda module
-module use /proj/group/lmu/envs_and_modules/slurm_modules/
-module --ignore-cache load Miniconda3/4.12.0_py38
-source activate tsc
-conda env list
-which python
-
-echo "Starting..."
-date
-
-PROG="{{ prog_dir }}/{{ prog }}"
-PATHS="{{ paths }}"
-OPTIONS="{{ options }} --job_name={{ job_name }} --job_id=$SLURM_JOBID"
-
-cmd="srun python ${PROG} --paths ${PATHS} ${OPTIONS}"
-echo ${cmd}
-${cmd}
-
-echo "Done."
-date
-"""
 
 def git_clone(repo, branch):
     tmpstr = "tmp_clone_" + datetime.now().strftime("%H%M%S%f")
@@ -77,6 +36,7 @@ def git_clone(repo, branch):
     return prog_dir
 
 @click.command()
+@click.option("--template", type=str, default="sbatch_template_puhti.sh")
 @click.option("--job_name", type=str, default="tsc-it")
 @click.option("--job_dir", type=str, default="/wrk-vakka/users/hajaalin/output/TSC")
 @click.option("--cluster", type=click.Choice(['ukko','kale']), default="ukko")
@@ -90,7 +50,7 @@ def git_clone(repo, branch):
 @click.option("--options", type=str, default="'--epochs=100 --kernel_size=15 --repeats=20'")
 @click.option("--sbatch_dir", type=str, default="./sbatch")
 @click.option("--loop_epochs", type=(int,int,int))
-def create_sbatch(job_name, job_dir, cluster, partition, time, test, prog, branch_n, branch_i, paths, options, sbatch_dir, loop_epochs):
+def create_sbatch(template, job_name, job_dir, cluster, partition, time, test, prog, branch_n, branch_i, paths, options, sbatch_dir, loop_epochs):
     job_dir = Path(job_dir) / job_name
     job_dir.mkdir(exist_ok=True, parents=True)
 
@@ -124,6 +84,10 @@ def create_sbatch(job_name, job_dir, cluster, partition, time, test, prog, branc
     # add a common timestamp to all subtasks
     now = datetime.now().strftime("%Y%m%d%H%M")
 
+    templateLoader = jinja2.FileSystemLoader(searchpath="./")
+    templateEnv = jinja2.Environment(loader=templateLoader)
+    sbatch_template = templateEnv.get_template(template)
+
     if loop_epochs:
         emin,emax,edelta = loop_epochs
         assert not "--epochs" in options, "--epochs conflicts with --loop_epochs."
@@ -134,7 +98,7 @@ def create_sbatch(job_name, job_dir, cluster, partition, time, test, prog, branc
             print("epochs: " + str(epochs))
             values['options'] = options + " --epochs=" + str(epochs) + " --now=" + now + " --inceptiontime_dir=" + inceptiontime_dir
             
-            sbatch = Environment().from_string(BASH).render(values)
+            sbatch = sbatch_template.render(values)
             filename = "sbatch_" + job_name + "_e" + str(epochs) + ".sh"
 
             with open(sbatch_dir / filename, 'w') as f:
@@ -142,7 +106,7 @@ def create_sbatch(job_name, job_dir, cluster, partition, time, test, prog, branc
 
     else:
         values['options'] = options + " --now=" + now + " --inceptiontime_dir=" + inceptiontime_dir
-        sbatch = Environment().from_string(BASH).render(values)
+        sbatch = sbatch_template.render(values)
         filename = "sbatch_" + job_name + ".sh"
 
         with open(sbatch_dir / filename, 'w') as f:
