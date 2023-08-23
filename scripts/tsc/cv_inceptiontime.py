@@ -1,6 +1,8 @@
 import click
 from datetime import datetime
+import h5py
 import logging
+from logging import Handler
 import numpy as np
 from pathlib import Path
 import pandas as pd
@@ -292,7 +294,50 @@ def shap2npy(fset, shap_lists_all, output_shap):
     np.save(output_shap / 'list_shap_grad.npy', list_shap_grad)
     np.save(output_shap / 'list_X_test.npy', list_X_test)
     np.save(output_shap / 'features.npy', fsets[fset])
-        
+
+    
+def write_shap_results_to_hdf5(hdf5_file, job_id,
+                               fset, shap_lists_all, output_shap):
+    (list_accuracy, list_idx_train, list_idx_test, \
+     list_shap_deep, list_shap_grad, list_X_test) = shap_lists_all
+
+    with h5py.File(hdf5_file, 'a', libver='latest') as hf:
+        repetition_group = hf.require_group(job_id)
+        shap_group = repetition_group.require_group('shap')
+
+        shap_group.create_dataset('list_idx_train', data=list_idx_train)
+        shap_group.create_dataset('list_idx_test', data=list_idx_test)
+        shap_group.create_dataset('list_accuracy', data=list_accuracy)
+        shap_group.create_dataset('list_shap_deep', data=list_shap_deep)
+        shap_group.create_dataset('list_shap_grad', data=list_shap_grad)
+        shap_group.create_dataset('list_X_test', data=list_X_test)
+        shap_group.attrs['features'] = fsets[fset]
+    
+def write_results_to_hdf5(hdf5_file, job_id, job_type, results):
+    with h5py.File(hdf5_file, 'a', libver='latest') as hf:
+        repetition_group = hf.require_group(job_id)
+        job_type_group = repetition_group.require_group(job_type)
+        job_dataset = job_type_group.create_dataset(f'job_{job_id}', data=results)
+
+class HDF5Handler(Handler):
+    def __init__(self, hdf5_file, job_id):
+        super().__init__()
+        self.hdf5_file = hdf5_file
+        self.job_id = job_id
+
+    def emit(self, record):
+        log_message = self.format(record)
+
+        with h5py.File(self.hdf5_file, 'a', libver='latest') as hf:
+            job_group = hf.require_group(self.job_name)
+            repetition_group = job_group.require_group(self.job_id)
+            logs_group = repetition_group.require_group('log')
+            log_dataset = logs_group.create_dataset(f'log_{record.created}', data=log_message)
+            
+            # Store log level as an attribute
+            log_dataset.attrs['level'] = record.levelname
+
+            
 
 
 @click.command()
@@ -320,20 +365,22 @@ def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, bottleneck_size, 
     if not now:
         now = datetime.now().strftime("%Y%m%d%H%M%S")
 
-    log_dir = Path(paths["log"]["tsc"]) / job_name / now
-    log_dir.mkdir(parents=True, exist_ok=True)
+    # logs and results both go into this file
+    hdf5_file = '%s_%s.h5' % (job_name, now)
+    with h5py.File(hdf5_file, 'r') as hf:
+        hf.attrs['job_name'] = job_name
+        hf.attrs['now'] = now
 
     # configure logger
-    log_file = log_dir / (f"cv_inceptiontime_%s_%s_%s.log" % (job_name, now, job_id))
     logger.setLevel(logging.DEBUG)
-    file_handler = logging.FileHandler(log_file, mode="w")
     formatter = logging.Formatter(
         "%(asctime)s : %(levelname)s : %(name)s : %(message)s"
     )
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+    hdf5_handler = HDF5Handler(hdf5_file, job_id)
+    hdf5_handler.setFormatter(formatter)
+    logger.addHandler(hdf5_handler)
     logger.info(f"Finished logger configuration!")
-    print("Logging to " + str(log_file))
+    print("Logging to " + str(hdf5_file))
 
     # log the version of this code
     logger.info(Path(__file__).absolute())
@@ -347,14 +394,6 @@ def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, bottleneck_size, 
     # log the InceptionTime version
     logger.info(inceptiontime_dir)
 
-    # output folders
-    output_cv = Path(paths["output"]["cv"]) / job_name / now
-    output_cv.mkdir(parents=True, exist_ok=True)
-    output_it = Path(paths["output"]["it"]) / job_id
-    output_it.mkdir(parents=True, exist_ok=True)
-    output_it = str(output_it) + "/"
-    output_shap = Path(paths["output"]["shap"]) / job_name / now / job_id
-    output_shap.mkdir(parents=True, exist_ok=True)
 
     # read the data 
     data_dir = paths["data"]["dir"]
@@ -389,14 +428,13 @@ def cv_inceptiontime(inceptiontime_dir, paths, use_bottleneck, bottleneck_size, 
     if len(kernels) > 0:
         kernel_info = "_".join([str(x) for x in kernels])
     print(kernel_info)
-    scores_file = "cv_" + job_name + "_k" + kernel_info + "_e" + str(epochs) + "_" + now + ".csv"
-    scores_file = output_cv / scores_file
-    scores.to_csv(scores_file, index=False)
-    logger.info("Wrote scores to " + str(scores_file))
+    scores['kernel_info'] = kernel_info
+    write_results_to_hdf5(job_id, 'cross_validation', scores)
+    logger.info("Wrote scores to " + str(hdf5_file))
 
 
     # save X_test and accuracy lists, even if SHAP values are not calculated
-    shap2npy(fset, shap_lists_all, output_shap)
+    write_shap_results_to_hdf5(hdf5_file, job_id, fset, shap_lists_all, output_shap)
 
         
 

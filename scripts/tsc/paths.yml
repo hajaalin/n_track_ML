@@ -3,12 +3,8 @@ src:
   inceptiontime: "/proj/hajaalin/Projects/InceptionTime"
 
 output:
-  cv: "/proj/group/lmu/projects/n_track_ML/output/cross-validation"
+  hdf5: "/proj/group/lmu/projects/n_track_ML/output/hdf5"
   it: "/wrk/users/hajaalin/output/TSC/InceptionTime/"
-  shap: "/proj/group/lmu/projects/n_track_ML/output/shap"
-
-log:
-  tsc: "/proj/group/lmu/projects/n_track_ML/output/log"
 
 data:
   dir: "/proj/hajaalin/Projects/n_track_ML/to_become_public/tracking_output/"
