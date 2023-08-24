@@ -1202,3 +1202,43 @@ python create_sbatch.py --branch_i master --branch_n master --job_name $job_name
 
 for s in $(ls sbatch/k3_14_28_depth1_nobn_adam00001b_all_20230714/*.sh); do sbatch $s; done;
 for s in $(ls sbatch/k3_14_28_depth1_nobn_adam000001_all_20230714/*.sh); do sbatch $s; done;
+
+
+##
+## 20230824
+##
+
+# CSC
+
+job="shap_best_adam"
+fset="all"
+ts="20230824"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=False --optimizer=Adam --epochs=100 --learning_rate=0.00001 --repeats=20 --save_shap_values --verbose" --sbatch_dir sbatch/$job_name --paths /users/hajaalin/git/n_track_ML/scripts/tsc/paths_csc.yml --job_dir /scratch/tanhuanp/n_track_ML
+
+for i in {1..20}
+do
+echo $i
+sbatch sbatch/shap_best_adam_all_20230824/sbatch_shap_best_adam_all_20230824.sh
+done
+
+
+## that was fast, and with repeats on!
+## redo without repeats
+
+job="shap_best_adam"
+fset="all"
+ts="20230824b"
+job_name="${job}_${fset}_${ts}"
+echo $job_name
+
+python create_sbatch.py --branch_i master --branch_n master --job_name $job_name --options "--fset $fset --depth 1 -k 3 -k 14 -k 28 --use_bottleneck=False --optimizer=Adam --epochs=100 --learning_rate=0.00001 --repeats=1 --save_shap_values --verbose" --sbatch_dir sbatch/$job_name --paths /users/hajaalin/git/n_track_ML/scripts/tsc/paths_csc.yml --job_dir /scratch/tanhuanp/n_track_ML
+
+for i in {1..20}
+do
+echo $i
+sbatch sbatch/shap_best_adam_all_20230824b/sbatch_shap_best_adam_all_20230824b.sh
+done
+
