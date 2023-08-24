@@ -5,7 +5,7 @@ from pathlib import Path, PosixPath
 import re
 import subprocess
 
-def git_clone(repo, branch):
+def git_clone(repo, branch, run_dir):
     tmpstr = "tmp_clone_" + datetime.now().strftime("%H%M%S%f")
     tmp = PosixPath(tmpstr)
     
@@ -24,9 +24,8 @@ def git_clone(repo, branch):
     commit = result.stdout.decode().replace("'","")
     print(commit)
 
-    root = Path("/proj/hajaalin/Projects/n_track_ML/run")
     project = re.search(".*/(.*).git$", repo).groups()[0]
-    prog_dir = root / (project + "_" + commit)
+    prog_dir = run_dir / (project + "_" + commit)
     if not prog_dir.exists():
         tmp.rename(prog_dir)
     #else:
@@ -56,15 +55,17 @@ def create_sbatch(template, job_name, job_dir, cluster, partition, time, test, p
 
     prog_dir = Path(__file__).parent.absolute()
     inceptiontime_dir = 'TEST'
+
+    run_dir = prog_dir / '../../run'
     
     if not test:
         # clone n_track_ML
-        repo = "git@github.com-n_track_ML:hajaalin/n_track_ML.git"
-        prog_dir = str(git_clone(repo, branch_n) / "scripts" / "tsc")
+        repo = "https://github.com/hajaalin/n_track_ML.git"
+        prog_dir = str(git_clone(repo, branch_n, run_dir) / "scripts" / "tsc")
 
         # clone InceptionTime
-        repo = "git@github.com-InceptionTime:hajaalin/InceptionTime.git"
-        inceptiontime_dir = str(git_clone(repo, branch_i))        
+        repo = "https://github.com/hajaalin/InceptionTime.git"
+        inceptiontime_dir = str(git_clone(repo, branch_i, run_dir))        
         
     values = {'job_name': job_name, \
               'job_dir': str(job_dir), \
