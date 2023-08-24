@@ -1,0 +1,15 @@
+
+src:
+  inceptiontime: "/users/hajaalin/git/InceptionTime"
+
+output:
+  cv: "/scratch/tanhuanp/n_track_ML/output/cross-validation"
+  it: "/scratch/tanhuanp/n_track_ML/output/InceptionTime/"
+  shap: "/scratch/tanhuanp/n_track_ML/output/shap"
+
+log:
+  tsc: "/scratch/tanhuanp/n_track_ML/output/log"
+
+data:
+  dir: "/users/hajaalin/git/n_track_ML/to_become_public/tracking_output/"
+  raw_data_file: "data_47091baa.csv"
